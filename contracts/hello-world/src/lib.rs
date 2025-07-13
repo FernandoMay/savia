@@ -2,7 +2,7 @@
 use soroban_sdk::{contract, contractimpl, contracttype, xdr::ToXdr, Address, Bytes, BytesN, Env, String};
 
 extern crate alloc;
-use alloc::string::ToString;
+// use alloc::string::ToString;
 
 // Savia Smart Contracts for Stellar
 // Fixed version compatible with Soroban SDK
@@ -171,10 +171,10 @@ impl SaviaContract {
         
         // Convert to bytes properly
         let beneficiary_bytes = beneficiary.clone().to_xdr(&env);
-        let title_bytes = title.to_string().into_bytes();
+        let title_bytes = title.to_val().to_xdr(&env);
                
         hash_input.append(&beneficiary_bytes); //&Bytes::from_slice(&env, &beneficiary_bytes));
-        hash_input.append(&Bytes::from_slice(&env, &title_bytes));
+        hash_input.append(&title_bytes);
         hash_input.append(&Bytes::from_slice(&env, &goal_amount.to_be_bytes()));
         hash_input.append(&Bytes::from_slice(&env, &current_time.to_be_bytes()));
         hash_input.append(&Bytes::from_slice(&env, &new_counter.to_be_bytes()));
@@ -434,12 +434,12 @@ impl SaviaContract {
         
         let campaign_bytes = Bytes::from_slice(&env, campaign_id.to_array().as_slice());
         let recipient_bytes = recipient.clone().to_xdr(&env);
-        let milestone_bytes = milestone.to_string().into_bytes();
+        let milestone_bytes = milestone.to_val().to_xdr(&env);
         
         hash_input.append(&campaign_bytes);
         hash_input.append(&recipient_bytes);
         hash_input.append(&Bytes::from_slice(&env, &amount.to_be_bytes()));
-        hash_input.append(&Bytes::from_slice(&env, &milestone_bytes));
+        hash_input.append(&milestone_bytes);
         hash_input.append(&Bytes::from_slice(&env, &new_counter.to_be_bytes()));
         
         let disbursement_id: BytesN<32> = env.crypto().sha256(&hash_input).into();
