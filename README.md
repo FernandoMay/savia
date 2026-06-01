@@ -1,47 +1,31 @@
-# Savia Project
+# Savia
 
-## Project Structure
+Blockchain crowdfunding platform on Stellar (Soroban) with Mexican compliance (KYC, CURP), dynamic NFT growth system, and medical documentation verification.
 
-This repository uses the recommended structure for a Soroban project:
-```text
-.
-├── contracts
-│   └── hello_world
-│       ├── src
-│       │   ├── lib.rs
-│       │   └── test.rs
-│       └── Cargo.toml
-├── Cargo.toml
-└── README.md
+## Contract Features
+
+- **Campaign Management** — Create and manage medical fundraising campaigns
+- **KYC/AML Compliance** — Mexican CURP validation, phone verification, tiered KYC levels
+- **Medical Documentation** — Submit, verify, and track medical documents on-chain
+- **Dynamic NFTs** — Donation-based tree growth system (Seed → MightyTree)
+- **Trust Scoring** — Reputation system with fraud reporting
+- **Peso Conversion** — XLM ↔ MXN exchange via EtherFuse integration
+- **Proof Deadlines** — Automated fund locking if documentation is overdue
+- **Emergency Controls** — Pause/resume campaigns, refund processing
+
+## Tech Stack
+
+- **Smart Contract:** Soroban SDK 22.0.0 (Rust → WASM)
+- **Network:** Stellar
+- **Testing:** soroban-sdk testutils
+
+## Development
+
+```bash
+cargo test                    # Run tests
+cargo build --target wasm32-unknown-unknown --release  # Build contract
 ```
 
-- New Soroban contracts can be put in `contracts`, each in their own directory. There is already a `hello_world` contract in there to get you started.
-- If you initialized this project with any other example contracts via `--with-example`, those contracts will be in the `contracts` directory as well.
-- Contracts should have their own `Cargo.toml` files that rely on the top-level `Cargo.toml` workspace for their dependencies.
-- Frontend libraries can be added to the top-level directory as well. If you initialized this project with a frontend template via `--frontend-template` you will have those files already included.
+## Tests
 
-## First Version of the Contract
-
-[Savia Contract](https://github.com/FernandoMay/soroban-hello-world)
-
-## First Versión of the Platform
-
-[Savia v1 Github](https://github.com/FernandoMay/saviia)
-[Savia - Stellar Crowdfunding Platform](https://saviaw3.netlify.app/)
-
-## Second Version of the Platform
-
-[Savia v2 Github](https://github.com/FernandoMay/savia-stellar-nexus)
-
-## Third Version of the Platform - Official Release
-
-[Savia v3 Github](https://github.com/FernandoMay/savia-stellar-bloom-54)
-[Savia - Donar con confianza](https://saviadonations.netlify.app/)
-
-## Mobile Application
-
-[Savia App](https://github.com/FernandoMay/saviaapp)
-
-## Official Repository of Savia Contract
-
-[Savia Contract](https://github.com/FernandoMay/savia)
+6 tests covering: initialization, KYC registration, campaign creation, donations with peso conversion, dynamic NFT growth, and medical documentation flow.
