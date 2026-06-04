@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  wallet    String   @unique
+  email     String?
+  name      String?
+  kycStatus KYCStatus @default(NOT_VERIFIED)
+  trustScore Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+  donations Transaction[]
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  goalAmount      Float
+  currentAmount   Float    @default(0)
+  category        String?
+  location        String?
+  medicalCondition String?
+  beneficiaryAddress String
+  creatorId       String
+  endDate         DateTime
+  status          CampaignStatus @default(ACTIVE)
+  imageUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  creator    User          @relation(fields: [creatorId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id         String   @id @default(cuid())
+  campaignId String
+  donorId    String
+  amount     Float
+  token      String   @default("XLM")
+  txHash     String?
+  status     TransactionStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+  donor    User     @relation(fields: [donorId], references: [id])
+}
+
+model KYC {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  documentType String?
+  documentUrl  String?
+  status    KYCStatus @default(NOT_VERIFIED)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum CampaignStatus {
+  ACTIVE
+  FUNDED
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum KYCStatus {
+  NOT_VERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
