@@ -1,7 +1,7 @@
 ﻿Deploy Savia Carbon Credit Contract
 
 1. Build the contract:
-   cd contracts/hello-world && make build
+   cd contracts/savia && make build
 
 2. Fund your Stellar account on testnet:
    https://laboratory.stellar.org/#account-creator?network=testnet

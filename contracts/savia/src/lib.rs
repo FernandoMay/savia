@@ -126,12 +126,13 @@ pub struct DynamicNFT {
 #[derive(Clone)]
 #[contracttype]
 pub enum TreeGrowthStage {
-    Seed,        // 0-499 pesos
-    Sprout,      // 500-1499 pesos
-    Sapling,     // 1500-4999 pesos
-    YoungTree,   // 5000-9999 pesos
-    MatureTree,  // 10000-24999 pesos
-    MightyTree,  // 25000+ pesos
+    PreSeed,    // 0 XLM
+    Seed,       // 10 XLM
+    Sprout,     // 25 XLM
+    Bloom,      // 50 XLM
+    Blossom,    // 100 XLM
+    Tree,       // 200 XLM
+    SaviaTree,  // 500 XLM
 }
 
 #[derive(Clone)]
@@ -194,6 +195,7 @@ pub enum DataKey {
     PesoExchangeRate,
     KYCVerifiers,
     MedicalVerifiers,
+    OwnerNFTs(Address),
 }
 
 // ========== ENHANCED ERROR CODES ==========
@@ -569,7 +571,7 @@ impl SaviaContract {
 
         // Handle dynamic NFT
         if mint_nft {
-            Self::mint_or_update_dynamic_nft(env.clone(), donor, campaign_id, net_peso_amount)?;
+            Self::mint_or_update_dynamic_nft(env.clone(), donor, campaign_id, net_xlm_amount)?;
         }
 
         Ok(donation_id)
@@ -643,7 +645,7 @@ impl SaviaContract {
             if nft.donation_count == 10 {
                 nft.special_achievements.push_back(String::from_str(&env, "Consistent Supporter"));
             }
-            if nft.total_donated >= 25000 {
+            if nft.total_donated >= 1_000_000_000 { // 100+ XLM
                 nft.special_achievements.push_back(String::from_str(&env, "Major Donor"));
             }
 
@@ -673,15 +675,16 @@ impl SaviaContract {
         Ok(())
     }
 
-    /// Calculate tree growth stage based on total donated pesos
-    fn calculate_growth_stage(total_pesos: u64) -> TreeGrowthStage {
-        match total_pesos {
-            0..=499 => TreeGrowthStage::Seed,
-            500..=1499 => TreeGrowthStage::Sprout,
-            1500..=4999 => TreeGrowthStage::Sapling,
-            5000..=9999 => TreeGrowthStage::YoungTree,
-            10000..=24999 => TreeGrowthStage::MatureTree,
-            _ => TreeGrowthStage::MightyTree,
+    /// Calculate tree growth stage based on total XLM donated (in stroops)
+    fn calculate_growth_stage(total_stroops: u64) -> TreeGrowthStage {
+        match total_stroops {
+            0..=99_999_999 => TreeGrowthStage::PreSeed,       // < 10 XLM
+            100_000_000..=249_999_999 => TreeGrowthStage::Seed,     // 10-24 XLM
+            250_000_000..=499_999_999 => TreeGrowthStage::Sprout,   // 25-49 XLM
+            500_000_000..=999_999_999 => TreeGrowthStage::Bloom,    // 50-99 XLM
+            1_000_000_000..=1_999_999_999 => TreeGrowthStage::Blossom, // 100-199 XLM
+            2_000_000_000..=4_999_999_999 => TreeGrowthStage::Tree,    // 200-499 XLM
+            _ => TreeGrowthStage::SaviaTree,                           // 500+ XLM
         }
     }
 
@@ -1014,6 +1017,93 @@ impl SaviaContract {
         }
         Ok(())
     }
+
+    /// Mint a new dynamic NFT for a donor (public alias called by frontend)
+    pub fn mint(env: Env, owner: Address, metadata_json: String, stage_id: u32) -> Result<BytesN<32>, soroban_sdk::Error> {
+        let counter: u64 = env.storage().instance().get(&DataKey::NFTCounter).unwrap_or(0);
+        let new_counter = counter + 1;
+        env.storage().instance().set(&DataKey::NFTCounter, &new_counter);
+
+        let mut hash_input = Bytes::new(&env);
+        hash_input.append(&owner.to_xdr(&env));
+        hash_input.append(&Bytes::from_slice(&env, &new_counter.to_be_bytes()));
+        let nft_id: BytesN<32> = env.crypto().sha256(&hash_input).into();
+
+        let growth_stage = match stage_id {
+            0 => TreeGrowthStage::PreSeed,
+            1 => TreeGrowthStage::Seed,
+            2 => TreeGrowthStage::Sprout,
+            3 => TreeGrowthStage::Bloom,
+            4 => TreeGrowthStage::Blossom,
+            5 => TreeGrowthStage::Tree,
+            _ => TreeGrowthStage::SaviaTree,
+        };
+
+        let current_time = env.ledger().timestamp();
+        let zero: [u8; 32] = [0u8; 32];
+        let nft = DynamicNFT {
+            id: nft_id.clone(),
+            owner: owner.clone(),
+            campaign_id: BytesN::from_array(&env, &zero),
+            tree_level: stage_id,
+            total_donated: 0,
+            donation_count: 0,
+            created_at: current_time,
+            last_updated: current_time,
+            metadata_uri: metadata_json,
+            growth_stage,
+            special_achievements: Vec::new(&env),
+        };
+
+        env.storage().persistent().set(&DataKey::DynamicNFT(nft_id.clone()), &nft);
+
+        let mut owner_nfts: Vec<BytesN<32>> = env.storage().persistent().get(&DataKey::OwnerNFTs(owner)).unwrap_or(Vec::new(&env));
+        owner_nfts.push_back(nft_id.clone());
+        env.storage().persistent().set(&DataKey::OwnerNFTs(owner), &owner_nfts);
+
+        Ok(nft_id)
+    }
+
+    /// Record an on-chain donation entry
+    pub fn record_donation(env: Env, campaign_id: BytesN<32>, donor: Address, amount: u64) -> Result<BytesN<32>, soroban_sdk::Error> {
+        let counter: u64 = env.storage().instance().get(&DataKey::DonationCounter).unwrap_or(0);
+        let new_counter = counter + 1;
+        env.storage().instance().set(&DataKey::DonationCounter, &new_counter);
+
+        let mut hash_input = Bytes::new(&env);
+        hash_input.append(&Bytes::from_slice(&env, campaign_id.to_array().as_slice()));
+        hash_input.append(&donor.to_xdr(&env));
+        hash_input.append(&Bytes::from_slice(&env, &amount.to_be_bytes()));
+        hash_input.append(&Bytes::from_slice(&env, &new_counter.to_be_bytes()));
+        let donation_id: BytesN<32> = env.crypto().sha256(&hash_input).into();
+
+        let donation = Donation {
+            id: donation_id.clone(),
+            campaign_id,
+            donor,
+            amount,
+            peso_amount: 0,
+            timestamp: env.ledger().timestamp(),
+            nft_minted: false,
+            anonymous: false,
+            refunded: false,
+            etherfuse_tx_id: String::from_str(&env, ""),
+        };
+
+        env.storage().persistent().set(&DataKey::Donation(donation_id.clone()), &donation);
+        Ok(donation_id)
+    }
+
+    /// Return the number of NFTs owned by an address
+    pub fn balance_of(env: Env, owner: Address) -> u32 {
+        let owner_nfts: Vec<BytesN<32>> = env.storage().persistent().get(&DataKey::OwnerNFTs(owner)).unwrap_or(Vec::new(&env));
+        owner_nfts.len() as u32
+    }
+
+    /// Return the list of NFT IDs owned by an address
+    pub fn tokens_for_owner(env: Env, owner: Address) -> Vec<BytesN<32>> {
+        env.storage().persistent().get(&DataKey::OwnerNFTs(owner)).unwrap_or(Vec::new(&env))
+    }
 }
 
 // ========== TESTS ==========
@@ -1190,21 +1280,21 @@ mod tests {
             &String::from_str(&env, "ETF_ACCOUNT_123"),
         ).unwrap();
 
-        // Make small donation (seed stage)
-        client.donate(&campaign_id, &donor, &555556, &false, &true).unwrap(); // ~100 pesos
+        // Make small donation (preseed stage, <10 XLM)
+        client.donate(&campaign_id, &donor, &50000000, &false, &true).unwrap(); // 5 XLM
 
         let nft = client.get_donor_nft(&donor, &campaign_id);
         assert!(nft.is_some());
         let nft_data = nft.unwrap();
-        assert_eq!(nft_data.growth_stage, TreeGrowthStage::Seed);
+        assert_eq!(nft_data.growth_stage, TreeGrowthStage::PreSeed);
 
-        // Make larger donation (sprout stage)
-        client.donate(&campaign_id, &donor, &2777778, &false, &true).unwrap(); // ~500 pesos
+        // Make larger donation (seed stage, cumulative >10 XLM)
+        client.donate(&campaign_id, &donor, &150000000, &false, &true).unwrap(); // +15 XLM = 20 total
 
         let updated_nft = client.get_donor_nft(&donor, &campaign_id);
         assert!(updated_nft.is_some());
         let updated_nft_data = updated_nft.unwrap();
-        assert_eq!(updated_nft_data.growth_stage, TreeGrowthStage::Sprout);
+        assert_eq!(updated_nft_data.growth_stage, TreeGrowthStage::Seed);
         assert_eq!(updated_nft_data.donation_count, 2);
     }
 

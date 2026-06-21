@@ -15,3 +15,10 @@ jobs:
       - run: rustup target add wasm32-unknown-unknown
       - run: cargo test
       - run: cargo build --target wasm32-unknown-unknown --release
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: savia-contract
+          path: target/wasm32-unknown-unknown/release/savia.wasm
+          if-no-files-found: error
