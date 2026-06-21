@@ -1,31 +1,55 @@
-# Savia
+# Savìa — Blockchain Medical Crowdfunding
 
-Blockchain crowdfunding platform on Stellar (Soroban) with Mexican compliance (KYC, CURP), dynamic NFT growth system, and medical documentation verification.
+Decentralized medical fundraising platform on **Stellar (Soroban)** with Mexican regulatory compliance (KYC/CURP), dynamic NFT-based donor recognition, and on-chain medical document verification.
 
-## Contract Features
+## Contract (Stellar Soroban)
 
-- **Campaign Management** — Create and manage medical fundraising campaigns
-- **KYC/AML Compliance** — Mexican CURP validation, phone verification, tiered KYC levels
-- **Medical Documentation** — Submit, verify, and track medical documents on-chain
-- **Dynamic NFTs** — Donation-based tree growth system (Seed → MightyTree)
-- **Trust Scoring** — Reputation system with fraud reporting
-- **Peso Conversion** — XLM ↔ MXN exchange via EtherFuse integration
-- **Proof Deadlines** — Automated fund locking if documentation is overdue
-- **Emergency Controls** — Pause/resume campaigns, refund processing
+The Savìa smart contract powers the entire platform with:
+- **Campaign Management** — Create, fund, and withdraw from medical fundraising campaigns
+- **KYC/AML Compliance** — Mexican CURP validation, phone verification, tiered KYC levels (1-3)
+- **Medical Documentation** — Submit, verify, and track medical documents on-chain with deadlines
+- **Dynamic NFTs** — Donation-based tree growth system (Seed → Sprout → Sapling → MightyTree)
+- **Trust Scoring** — Reputation system with fraud reporting and community moderation
+- **Peso Conversion** — XLM ↔ MXN exchange rate via EtherFuse Stellar integration
+- **Proof Deadlines** — Automated fund locking if documentation is overdue; admin extension
+- **Emergency Controls** — Pause/resume campaigns, refund processing, contract upgrade
 
-## Tech Stack
+### Deployed
+- **Testnet**: `CBBHIK6QE6K6BBDNGOBEXDZJCEZLCLXNNEDS7IEPWFIOQE46D2VN3YL5`
 
-- **Smart Contract:** Soroban SDK 22.0.0 (Rust → WASM)
-- **Network:** Stellar
-- **Testing:** soroban-sdk testutils
+## Frontend (Next.js)
 
-## Development
+React-based web interface at `frontend/` for donors and campaign creators.
 
-```bash
-cargo test                    # Run tests
-cargo build --target wasm32-unknown-unknown --release  # Build contract
+## Structure
+
+```
+savia/
+├── contracts/     # Soroban smart contract (Rust)
+│   └── savia/     # Main contract source
+├── frontend/      # Next.js web application
+├── scripts/       # Deployment and interaction scripts
+├── target/        # Compiled WASM artifacts
 ```
 
-## Tests
+## Quick Start
 
-6 tests covering: initialization, KYC registration, campaign creation, donations with peso conversion, dynamic NFT growth, and medical documentation flow.
+```bash
+# Build contract
+cd contracts/savia
+cargo build --target wasm32-unknown-unknown --release
+
+# Deploy to testnet
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/savia.wasm \
+  --source <identity>
+
+# Start frontend
+cd frontend
+npm install
+npm run dev
+```
+
+## Design System
+
+Uses the **Savia Vitality System**: Coral Heart (#F46F5E) primary, Muted Teal secondary, Newsreader (headings) + Hanken Grotesk (body) typography. See `design/DESIGN.md` for full tokens.
